@@ -17,7 +17,7 @@ export default class Display {
         this.ctx = target.getContext('2d')!;
         this.gfxMemory = chip.getGraphicsMemory();
 
-        this.pixelWidth = target.width/Display.WIDTH;
+        this.pixelWidth = target.width / Display.WIDTH;
         this.pixelHeight = target.height/Display.HEIGHT;
     }
 

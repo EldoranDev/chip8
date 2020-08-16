@@ -1,3 +1,5 @@
+import fontset from './fontset';
+
 export default class Chip8 {
     private static MEMORY_SIZE = 4096;
     private static REGISTER_COUNT = 16;
@@ -10,17 +12,17 @@ export default class Chip8 {
 
     public drawFlag: boolean = false;
 
-    private I: number = 0;
-    private pc: number = 0;
-    private sp: number = 0;
+    public I: number = 0;
+    public pc: number = 0;
+    public sp: number = 0;
 
     private delay: number = 0;
     private sound: number = 0;
     
-    private stack: Uint16Array;
-    private memory: Uint8Array;
-    private register: Uint8Array;
-    private keys: Uint8Array;
+    public stack: Uint16Array;
+    public memory: Uint8Array;
+    public register: Uint8Array;
+    public keys: Uint8Array;
 
     private gfx: Uint8Array;
 
@@ -40,9 +42,13 @@ export default class Chip8 {
         this.I = 0;
         this.sp = 0;
         
+        this.gfx.fill(0);
         this.memory.fill(0);
+        this.keys.fill(0);
 
-        // Load Fontset
+        for (let i = 0; i < 80; i++) {
+            this.memory[i] = fontset[i];
+        }
 
         this.delay = 0;
         this.sound = 0;
@@ -59,8 +65,10 @@ export default class Chip8 {
         this.drawFlag = false;
 
         // Fetch Opcode
-        const opcode = ((this.memory[this.pc]|0) << 8) | (this.memory[this.pc + 1]|0);
-        
+        const opcode = ((this.memory[this.pc]) << 8) | (this.memory[this.pc + 1]);
+    
+        console.log(opcode.toString(16));
+
         // Decode Opcode
         switch (opcode & 0xF000)
         {
@@ -74,6 +82,8 @@ export default class Chip8 {
                         this.sp--;
                         this.pc = this.stack[this.sp];
                         break;
+                    default:
+                        console.error(`Unknown opcode ${opcode}`);
                 }
             case 0x1000:
                 this.pc = opcode & 0x0FFF;
@@ -113,7 +123,7 @@ export default class Chip8 {
             case 0x7000: {
                 const x = (opcode & 0x0F00) >> 8;
 
-                this.register[x] = (opcode & 0x00FF) + this.register[x];
+                this.register[x] += opcode & 0x00FF;
                 break;
             }
             case 0x8000: {
@@ -125,39 +135,50 @@ export default class Chip8 {
                         this.register[x] = this.register[y];
                         break;
                     case 0x0001:
-                        this.register[x] = this.register[x] | this.register[y];
+                        this.register[x] |= this.register[y];
                         break;
                     case 0x0002:
-                        this.register[x] = this.register[x] & this.register[y];
+                        this.register[x] &= this.register[y];
                         break;
                     case 0x0003:
-                        this.register[x] = this.register[x] ^ this.register[y];
+                        this.register[x] ^= this.register[y];
                         break;
                     case 0x0004: {
                         const res = this.register[x] + this.register[y];
                         this.register[0xF] = res > 255 ? 1 : 0;
-                        this.register[x] = res & 0x00FF;
+                        this.register[x] = res % 255;
                     
                         break;
                     }
                     case 0x0005:
-                        this.register[0xF] = this.register[x] > this.register[y] ? 1 : 0;
-                        // TODO: check if we need custom underflow here
-                        this.register[x] = this.register[x] - this.register[y];
+                        this.register[0xF] = this.register[y] > this.register[x] ? 0 : 1;
+                        
+                        this.register[x] -=this.register[y];
+
+                        if (this.register[x] < 255) {
+                            this.register[x] = 255 - this.register[x];
+                        }
                         break;
                     case 0x0006:
                         this.register[0xF] = this.register[x] & 0x1;
-                        this.register[x] = (this.register[x] / 2)|0;
+                        this.register[x] >>= 1;
                         break;
                     case 0x0007:
-                        this.register[0xF] = this.register[y] > this.register[x] ? 1 : 0;
-                        // TODO: check if we need custom underflow here
+                        this.register[0xF] = this.register[x] > this.register[y] ? 0 : 1;
+                        
                         this.register[x] = this.register[y] - this.register[x];
+
+                        if (this.register[x] < 255) {
+                            this.register[x] = 255 - this.register[x];
+                        }
                         break;
                     case 0x000E:
-                        this.register[0xF] = this.register[x] & 0x1;
-                        this.register[x] = (this.register[x]*2)|0;
+                        this.register[0xF] = this.register[x] >> 7;
+
+                        this.register[x] <<= 1;
                         break;
+                    default:
+                        console.error(`Opcode not found ${opcode}`);
                 }
                 break;
             }
@@ -174,7 +195,7 @@ export default class Chip8 {
                 this.I = opcode & 0x0FFF;
                 break;
             case 0xB000:
-                this.pc = (opcode & 0x0FFF) + this.register[0x0];
+                this.pc = (opcode & 0x0FFF) + this.register[0];
                 break;
             case 0xC000: {
                 const x = (opcode & 0x0F00) >> 8;
@@ -193,13 +214,16 @@ export default class Chip8 {
                 let collision = false;
 
                 for (let line = 0; line < height; line++) {
+                    console.log(`drawing ${this.memory[this.I + line]}`);
                     collision =  collision || this.drawByte(x, y+line, this.memory[this.I + line]);
                 }
                 
                 this.drawFlag = true;
+
                 if (collision) {
                     this.register[0xF] = 1;
                 }
+                
                 break;
             }
             case 0xE000: {
@@ -207,10 +231,14 @@ export default class Chip8 {
 
                 switch(opcode & 0x00FF) {
                     case 0x009E:
-                        // TODO: Handle Input
+                        if (this.keys[this.register[x]] !== 0) {
+                            this.pc += 2;
+                        }
                         break;
                     case 0x00A1:
-                        // TODO: Handle Input
+                        if (this.keys[this.register[x]] === 0) {
+                            this.pc += 2;
+                        }
                         break;
                 }
                 break;
@@ -224,7 +252,7 @@ export default class Chip8 {
                         break;
                     case 0x000A:
                         // TODO: implement interrupt
-                        throw new Error("Hardware Interrupt not supported yet");
+                        this.pc -= 2;
                         break;
                     case 0x0015:
                         this.delay = this.register[x];
@@ -233,24 +261,38 @@ export default class Chip8 {
                         this.sound = this.register[x];
                         break;
                     case 0x001E:
-                        this.I = this.I + this.register[x]; 
+                        if (this.I + this.register[x] > 0xFFF) {
+                            this.register[0xF] = 1;
+                        } else {
+                            this.register[0xF] = 0;
+                        }
+
+                        this.I += this.register[x];
+                        this.I %= 0xFFF; 
                         break;
                     case 0x0029:
-                        // TODO: implement reverse lookup of sprite
-                        throw new Error("Rendering not supported yet");
+                        this.I = this.register[(opcode & 0x0F00) >> 8] * 0x5;
                         break;
-                    case 0x0033:
-                        //TODO: implement BCD
+                    case 0x0033: {
+                        const x = (opcode & 0x0F00) >> 8;
+                        
+                        this.memory[this.I] = (this.register[x] / 100)|0;
+                        this.memory[this.I + 1] = (this.register[x] / 10) % 10;
+                        this.memory[this.I + 2] = (this.register[x] % 100) % 10;
                         break;
+                    }
                     case 0x0055:
                         for (let i = 0x0; i <= 0xF; i++) {
                             this.memory[this.I + i] = this.register[i];
                         }
+                        this.I += ((opcode & 0x0F00) >> 8) + 1;
                         break;
                     case 0x0065:
                         for (let i = 0x0; i <= 0xF; i++) {
                             this.register[i] = this.memory[this.I+i];
                         }
+
+                        this.I += ((opcode & 0x0F00) >> 8) + 1;
                         break;
                 }
                 break;
@@ -296,7 +338,7 @@ export default class Chip8 {
 
         this.gfx[pixel] ^= bit;
 
-        return current === 0x1 && current !== this.gfx[pixel]
+        return current === 0x1 && this.gfx[pixel] === 0x0;
     }
     //#endregion
     
@@ -307,3 +349,5 @@ export default class Chip8 {
     }
     //#endregion
 }
+// TODO: implement reverse lookup of sprite
+// TODO: implement reverse lookup of sprite
