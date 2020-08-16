@@ -6,9 +6,10 @@
   padding: 2rem;
 }
 
-#canvas {
+#screen {
   display: block;
   margin: 2rem auto;
-  width: 540px;
-  height: 540px;
+  width: 640;
+  height: 320px;
+  border: black solid 1px;
 }
