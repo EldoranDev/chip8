@@ -269,37 +269,26 @@ export default class Chip8 {
                     case 0x0029:
                         this.I = this.register[(opcode & 0x0F00) >> 8] * 0x5;
                         break;
-                    case 0x0033: {
-                        const x = (opcode & 0x0F00) >> 8;
-                        
-                        this.memory[this.I] = (this.register[x] / 100)|0;
-                        this.memory[this.I + 1] = (this.register[x] / 10) % 10;
-                        this.memory[this.I + 2] = (this.register[x] % 100) % 10;
+                    case 0x0033: {                        
+                        this.memory[this.I] = (this.register[x] % 1000) / 100;
+                        this.memory[this.I + 1] = (this.register[x] % 100 ) / 10;
+                        this.memory[this.I + 2] = (this.register[x] % 10);
 
-                        console.log(`Need to save ${this.register[x]}`);
-                        console.log(
-                            'saved',
-                            this.memory[this.I],
-                            this.memory[this.I + 1],
-                            this.memory[this.I + 2],
-                        );
-                        console.log("fucking this up");
                         break;
                     }
                     case 0x0055:
-                        console.log("GOT CALLED");
-                        for (let i = 0x0; i <= 0xF; i++) {
+                        for (let i = 0; i <= x; i++) {
                             this.memory[this.I + i] = this.register[i];
                         }
-                        this.I += ((opcode & 0x0F00) >> 8) + 1;
+
+                        this.I += x + 1;
                         break;
                     case 0x0065:
-                        console.log("GOT CALLED aswell");
-                        for (let i = 0x0; i <= 0xF; i++) {
+                        for (let i = 0; i <= x; i++) {
                             this.register[i] = this.memory[this.I+i];
                         }
 
-                        this.I += ((opcode & 0x0F00) >> 8) + 1;
+                        this.I += x + 1;
                         break;
                 }
                 break;
