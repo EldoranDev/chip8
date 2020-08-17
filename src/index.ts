@@ -12,18 +12,7 @@ import Info from './info';
 
 const response = await fetch ('./test_opcode.ch8');
 const blob = await response.blob();
-// const rom = new Uint8Array(await blob.arrayBuffer());
-
-const rom = new Uint8Array([
-  0xD0,
-  0x55,
-  0xA0,
-  0x05,
-  0xD5,
-  0x55,
-  0xF0,
-  0x0A,
-]);
+const rom = new Uint8Array(await blob.arrayBuffer());
 
 const instance = new Chip8();
 const display = new Display(instance, canvas!);

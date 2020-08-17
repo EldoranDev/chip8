@@ -75,8 +75,8 @@ export default class Chip8 {
             case 0x0000:
                 switch (opcode & 0x000f) {
                     case 0x0000:
-                        this.gfx.fill(0);
-                        this.drawFlag = true;
+                        // this.gfx.fill(0);
+                        //this.drawFlag = true;
                         break;
                     case 0x000E:
                         this.sp--;
@@ -205,8 +205,9 @@ export default class Chip8 {
                 break;
             }
             case 0xD000: {
-                const x = (opcode & 0x0F00) >> 8;
-                const y = (opcode & 0x00F0) >> 4;
+                const x = this.register[(opcode & 0x0F00) >> 8];
+                const y = this.register[(opcode & 0x00F0) >> 4];
+
                 const height = opcode & 0x000F;
 
                 this.register[0xF] = 0;
