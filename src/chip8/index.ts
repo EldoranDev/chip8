@@ -287,12 +287,14 @@ export default class Chip8 {
                         break;
                     }
                     case 0x0055:
+                        console.log("GOT CALLED");
                         for (let i = 0x0; i <= 0xF; i++) {
                             this.memory[this.I + i] = this.register[i];
                         }
                         this.I += ((opcode & 0x0F00) >> 8) + 1;
                         break;
                     case 0x0065:
+                        console.log("GOT CALLED aswell");
                         for (let i = 0x0; i <= 0xF; i++) {
                             this.register[i] = this.memory[this.I+i];
                         }
