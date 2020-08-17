@@ -10,6 +10,9 @@ export default class Display {
     private pixelWidth = 1;
     private pixelHeight = 1;
 
+    private colorForeground: string;
+    private colorBackground: string;
+
     constructor(
         chip: Chip8,
         target: HTMLCanvasElement
@@ -19,6 +22,9 @@ export default class Display {
 
         this.pixelWidth = target.width / Display.WIDTH;
         this.pixelHeight = target.height/Display.HEIGHT;
+
+        this.colorBackground = getComputedStyle(document.documentElement).getPropertyValue('--color-background');
+        this.colorForeground = getComputedStyle(document.documentElement).getPropertyValue('--color-foreground');
     }
 
     public draw(): void {
@@ -26,9 +32,9 @@ export default class Display {
             for (let y = 0; y < Display.HEIGHT; y++) {
                 
                 if (!this.gfxMemory[y * Display.WIDTH + x]) {
-                    this.ctx.fillStyle = 'black';
+                    this.ctx.fillStyle = this.colorBackground;
                 } else {
-                    this.ctx.fillStyle = 'white';
+                    this.ctx.fillStyle = this.colorForeground;
                 }
 
                 this.ctx.fillRect(

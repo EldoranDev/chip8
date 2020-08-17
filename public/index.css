@@ -1,15 +1,32 @@
-#img {
-  display: block;
-  margin: auto;
-  height: 128px;
-  width: 128px;
-  padding: 2rem;
+:root {
+  --color-background: #011627;
+  --color-foreground: #F4F3EE;
+  --color-marker: #D33F49;
 }
 
-#screen {
-  display: block;
-  margin: 2rem auto;
-  width: 640;
-  height: 320px;
-  border: black solid 1px;
+body {
+  display: flex;
+  background: var(--color-background)
+}
+
+canvas {
+  border: 2px solid var(--color-marker);
+}
+
+table {
+  border: 0;
+}
+tr {
+  border-collapse: collapse;
+}
+tr.current {
+  background-color: var(--color-marker);
+}
+
+#info {
+  padding-left: 16px;
+}
+
+.panel {
+  color: var(--color-foreground);
 }

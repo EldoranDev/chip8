@@ -75,16 +75,16 @@ export default class Chip8 {
             case 0x0000:
                 switch (opcode & 0x000f) {
                     case 0x0000:
-                        // this.gfx.fill(0);
-                        //this.drawFlag = true;
+                        this.gfx.fill(0);
+                        this.drawFlag = true;
                         break;
                     case 0x000E:
-                        this.sp--;
-                        this.pc = this.stack[this.sp];
+                        this.pc = this.stack[--this.sp];
                         break;
                     default:
                         console.error(`Unknown opcode ${opcode}`);
                 }
+                break;
             case 0x1000:
                 this.pc = opcode & 0x0FFF;
                 this.pc -= 2;
@@ -94,6 +94,7 @@ export default class Chip8 {
                 this.sp++;
                 this.pc = opcode & 0x0FFF;
                 
+                console.log(`Putting ${this.stack[this.sp-1].toString(16)} on the stack`);
                 // we do not want to increase pc this tick
                 this.pc -= 2;
                 break;
@@ -110,7 +111,7 @@ export default class Chip8 {
                 }
                 break;
             case 0x5000:
-                const Vx = this.register[(opcode & 0x0F00 >> 8)];
+                const Vx = this.register[(opcode & 0x0F00) >> 8];
                 const Vy = this.register[(opcode & 0x00F0) >> 4];
 
                 if (Vx === Vy) {
@@ -146,7 +147,7 @@ export default class Chip8 {
                     case 0x0004: {
                         const res = this.register[x] + this.register[y];
                         this.register[0xF] = res > 255 ? 1 : 0;
-                        this.register[x] = res % 255;
+                        this.register[x] = res & 0x0FFF;
                     
                         break;
                     }
@@ -155,22 +156,17 @@ export default class Chip8 {
                         
                         this.register[x] -=this.register[y];
 
-                        if (this.register[x] < 255) {
-                            this.register[x] = 255 - this.register[x];
-                        }
+                        this.register[x] &= 0x0FFF;
                         break;
                     case 0x0006:
                         this.register[0xF] = this.register[x] & 0x1;
                         this.register[x] >>= 1;
                         break;
                     case 0x0007:
-                        this.register[0xF] = this.register[x] > this.register[y] ? 0 : 1;
-                        
+                        this.register[0xF] = this.register[x] > this.register[y] ? 0 : 1;                        
                         this.register[x] = this.register[y] - this.register[x];
 
-                        if (this.register[x] < 255) {
-                            this.register[x] = 255 - this.register[x];
-                        }
+                        this.register[x] &= 0x0FFF;
                         break;
                     case 0x000E:
                         this.register[0xF] = this.register[x] >> 7;
@@ -215,7 +211,6 @@ export default class Chip8 {
                 let collision = false;
 
                 for (let line = 0; line < height; line++) {
-                    console.log(`drawing ${this.memory[this.I + line]}`);
                     collision =  collision || this.drawByte(x, y+line, this.memory[this.I + line]);
                 }
                 
@@ -269,7 +264,7 @@ export default class Chip8 {
                         }
 
                         this.I += this.register[x];
-                        this.I %= 0xFFF; 
+                        this.I &= 0xFFF; 
                         break;
                     case 0x0029:
                         this.I = this.register[(opcode & 0x0F00) >> 8] * 0x5;
@@ -280,6 +275,15 @@ export default class Chip8 {
                         this.memory[this.I] = (this.register[x] / 100)|0;
                         this.memory[this.I + 1] = (this.register[x] / 10) % 10;
                         this.memory[this.I + 2] = (this.register[x] % 100) % 10;
+
+                        console.log(`Need to save ${this.register[x]}`);
+                        console.log(
+                            'saved',
+                            this.memory[this.I],
+                            this.memory[this.I + 1],
+                            this.memory[this.I + 2],
+                        );
+                        console.log("fucking this up");
                         break;
                     }
                     case 0x0055:

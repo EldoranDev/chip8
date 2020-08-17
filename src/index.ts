@@ -10,7 +10,7 @@ import Info from './info';
 (async () => {
   const canvas = document.getElementById('screen') as HTMLCanvasElement;
 
-const response = await fetch ('./test_opcode.ch8');
+const response = await fetch ('./roms/BC_test.ch8');
 const blob = await response.blob();
 const rom = new Uint8Array(await blob.arrayBuffer());
 
@@ -26,7 +26,32 @@ instance.loadGame(rom);
 
 display.draw();
 
+let stepping = false;
+let exit = false;
+
+window.onkeydown = (e: KeyboardEvent) => {
+  if (e.key === 'c') {
+    exit = true;
+  }
+
+  if (e.key === 's') {
+    stepping = !stepping;
+  }
+
+  if (e.keyCode === 32) {
+    slow++;
+  }
+}
+
 const run  = () => {
+  if (exit) return;
+
+  if (stepping && slow < slowFactor) {
+    requestAnimationFrame(run);
+    return;
+  }
+
+  slow = 0;
   info.update();
 
   instance.tick();
@@ -34,6 +59,7 @@ const run  = () => {
   if (instance.drawFlag) {
     display.draw();
   }
+
 
   requestAnimationFrame(run);
 }
