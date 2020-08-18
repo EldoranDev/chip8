@@ -10,7 +10,7 @@ import Info from './info';
 (async () => {
   const canvas = document.getElementById('screen') as HTMLCanvasElement;
 
-const response = await fetch ('./roms/BC_test.ch8');
+const response = await fetch ('./roms/demos/stars.ch8');
 const blob = await response.blob();
 const rom = new Uint8Array(await blob.arrayBuffer());
 

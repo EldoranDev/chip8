@@ -323,6 +323,9 @@ export default class Chip8 {
 
     private setPixel(x: number, y: number, bit: number): boolean
     {
+        x = x % Chip8.GRAPGICS_WIDTH;
+        y = y % Chip8.GRAPGICS_HEIGHT;
+        
         const pixel = y * Chip8.GRAPGICS_WIDTH + x;
         const current = this.gfx[pixel];
 
