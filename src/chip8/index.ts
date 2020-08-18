@@ -21,7 +21,7 @@ export default class Chip8 {
     
     public stack: Uint16Array;
     public memory: Uint8Array;
-    public register: Uint8Array;
+    public V: Uint8Array;
     public keys: Uint8Array;
 
     private gfx: Uint8Array;
@@ -29,7 +29,7 @@ export default class Chip8 {
     public constructor()
     {
         this.memory = new Uint8Array(Chip8.MEMORY_SIZE);
-        this.register = new Uint8Array(Chip8.REGISTER_COUNT);
+        this.V = new Uint8Array(Chip8.REGISTER_COUNT);
         this.gfx = new Uint8Array(Chip8.GRAPHICS_MEMORY);
         this.stack = new Uint16Array(Chip8.STACK_SIZE);
         this.keys = new Uint8Array(Chip8.KEY_COUNT);
@@ -69,230 +69,224 @@ export default class Chip8 {
     
         console.log(opcode.toString(16));
 
+        const nnn = opcode & 0x0FFF;
+        const   n = opcode & 0x000F;
+        const  kk = opcode & 0x00FF;
+        const   x = (opcode & 0x0F00) >> 8;
+        const   y = (opcode & 0x00F0) >> 4;
+
         // Decode Opcode
         switch (opcode & 0xF000)
         {
             case 0x0000:
                 switch (opcode & 0x000f) {
-                    case 0x0000:
+                    case 0x0000: // 00E0 - CLS: Clear the display
                         this.gfx.fill(0);
                         this.drawFlag = true;
                         break;
-                    case 0x000E:
+                    case 0x000E: // 00EE - RET: return from subroutine
                         this.pc = this.stack[--this.sp];
                         break;
                     default:
                         console.error(`Unknown opcode ${opcode}`);
                 }
                 break;
-            case 0x1000:
-                this.pc = opcode & 0x0FFF;
+            case 0x1000: // 1nnn - JP addr Jump to location NNN
+                this.pc = nnn;
                 this.pc -= 2;
                 break;
-            case 0x2000:
+            case 0x2000: //2nnn - CALL addr: Call subroutine at NNN
                 this.stack[this.sp] = this.pc;
                 this.sp++;
-                this.pc = opcode & 0x0FFF;
+                this.pc = nnn;
                 
-                console.log(`Putting ${this.stack[this.sp-1].toString(16)} on the stack`);
                 // we do not want to increase pc this tick
                 this.pc -= 2;
                 break;
-            case 0x3000:
-                if (this.register[(opcode & 0x0F00) >> 8] === (opcode & 0x00FF)) 
+            case 0x3000: // 3xkk - SE Vx, byte: Skip next instruction if Vx = kk
+                if (this.V[x] === kk) 
                 {
                     this.pc += 2;
                 }
                 break;
-            case 0x4000:
-                if (this.register[(opcode & 0x0F00) >> 8] !== (opcode & 0x00FF)) 
+            case 0x4000: // 4xkk - SNE Vx, byte: Skip next instruction if Vx != k
+                if (this.V[x] !== kk) 
                 {
                     this.pc += 2;
                 }
                 break;
-            case 0x5000:
-                const Vx = this.register[(opcode & 0x0F00) >> 8];
-                const Vy = this.register[(opcode & 0x00F0) >> 4];
+            case 0x5000: // 5xy0 - SE Vx, Vy: Skip next instruction if Vx = Vy
+                const Vx = this.V[x];
+                const Vy = this.V[y];
 
                 if (Vx === Vy) {
                     this.pc += 2;
                 }
                 break;
-            case 0x6000:
-                this.register[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
+            case 0x6000: // 6xkk - LD Vx, byte: Put value kk into register Vx
+                this.V[x] = kk;
                 break;
-            case 0x7000: {
-                const x = (opcode & 0x0F00) >> 8;
-
-                this.register[x] += opcode & 0x00FF;
+            case 0x7000: // ADD Vx, byte: Add the value kk to the value of register Vx, then stores the result in Vx
+                this.V[x] += kk;
                 break;
-            }
-            case 0x8000: {
-                const x = (opcode & 0x0F00) >> 8;
-                const y = (opcode & 0x00F0) >> 4;
-
+            case 0x8000: 
                 switch (opcode & 0x000F) {
-                    case 0x0000:
-                        this.register[x] = this.register[y];
+                    case 0x0000: // 8xy0 - LD Vx, Vy: Stores the value of Vy in Vx
+                        this.V[x] = this.V[y];
                         break;
-                    case 0x0001:
-                        this.register[x] |= this.register[y];
+                    case 0x0001: // 8xy1 - OR Vx, Vy: Sets Vx = Vx OR Vy
+                        this.V[x] |= this.V[y];
                         break;
-                    case 0x0002:
-                        this.register[x] &= this.register[y];
+                    case 0x0002: // 8xy2 - AND Vx, Vy: Set Vx = Vx AND Vy
+                        this.V[x] &= this.V[y];
                         break;
-                    case 0x0003:
-                        this.register[x] ^= this.register[y];
+                    case 0x0003: // 8xy3 - XOR Vx, Vy: Set Vx = Vx XOR Vy
+                        this.V[x] ^= this.V[y];
                         break;
-                    case 0x0004: {
-                        const res = this.register[x] + this.register[y];
-                        this.register[0xF] = res > 255 ? 1 : 0;
-                        this.register[x] = res & 0x0FFF;
-                    
+                    case 0x0004: { // 8xy4 - ADD Vx, Vy: Set Vx = Vx + Vy, set VF = carry 
+                        const res = this.V[x] + this.V[y];
+                        this.V[0xF] = res > 255 ? 1 : 0;
+
+                        // Make sure we are still in ushort range
+                        this.V[x] = res & 0x0FFF;
                         break;
                     }
                     case 0x0005:
-                        this.register[0xF] = this.register[y] > this.register[x] ? 0 : 1;
+                        this.V[0xF] = this.V[y] > this.V[x] ? 0 : 1;
                         
-                        this.register[x] -=this.register[y];
+                        this.V[x] -=this.V[y];
 
-                        this.register[x] &= 0x0FFF;
+                        // Make sure we are still in ushort range
+                        this.V[x] &= 0x0FFF;
                         break;
                     case 0x0006:
-                        this.register[0xF] = this.register[x] & 0x1;
-                        this.register[x] >>= 1;
+                        this.V[0xF] = this.V[x] & 0x1;
+                        this.V[x] >>= 1;
                         break;
                     case 0x0007:
-                        this.register[0xF] = this.register[x] > this.register[y] ? 0 : 1;                        
-                        this.register[x] = this.register[y] - this.register[x];
+                        this.V[0xF] = this.V[x] > this.V[y] ? 0 : 1;                        
+                        this.V[x] = this.V[y] - this.V[x];
 
-                        this.register[x] &= 0x0FFF;
+                        this.V[x] &= 0x0FFF;
                         break;
                     case 0x000E:
-                        this.register[0xF] = this.register[x] >> 7;
+                        this.V[0xF] = this.V[x] >> 7;
 
-                        this.register[x] <<= 1;
+                        this.V[x] <<= 1;
                         break;
                     default:
                         console.error(`Opcode not found ${opcode}`);
                 }
                 break;
-            }
-            case 0x9000: {
-                const x = (opcode & 0x0F00) >> 8;
-                const y = (opcode & 0x00F0) >> 4;
-
-                if (this.register[x] !== this.register[y]) {
+            case 0x9000: 
+                if (this.V[x] !== this.V[y]) {
                     this.pc += 2;
                 }
                 break;
-            }
             case 0xA000:
-                this.I = opcode & 0x0FFF;
+                this.I = nnn;
                 break;
             case 0xB000:
-                this.pc = (opcode & 0x0FFF) + this.register[0];
+                this.pc = nnn + this.V[0];
                 break;
             case 0xC000: {
-                const x = (opcode & 0x0F00) >> 8;
                 const random = (Math.random()*255)|0;
 
-                this.register[x] = random & (opcode & 0x00FF);
+                this.V[x] = random & (opcode & kk);
                 break;
             }
             case 0xD000: {
-                const x = this.register[(opcode & 0x0F00) >> 8];
-                const y = this.register[(opcode & 0x00F0) >> 4];
+                const coord_x = this.V[x];
+                const coord_y = this.V[y];
 
                 const height = opcode & 0x000F;
 
-                this.register[0xF] = 0;
+                this.V[0xF] = 0;
 
                 let collision = false;
 
                 for (let line = 0; line < height; line++) {
-                    collision =  collision || this.drawByte(x, y+line, this.memory[this.I + line]);
+                    collision =  collision || this.drawByte(coord_x, coord_y+line, this.memory[this.I + line]);
                 }
                 
                 this.drawFlag = true;
 
                 if (collision) {
-                    this.register[0xF] = 1;
+                    this.V[0xF] = 1;
                 }
                 
                 break;
             }
-            case 0xE000: {
-                const x = (opcode & 0x0F00) >> 8;
-
+            case 0xE000: 
                 switch(opcode & 0x00FF) {
                     case 0x009E:
-                        if (this.keys[this.register[x]] !== 0) {
+                        if (this.keys[this.V[x]] !== 0) {
                             this.pc += 2;
                         }
                         break;
                     case 0x00A1:
-                        if (this.keys[this.register[x]] === 0) {
+                        if (this.keys[this.V[x]] === 0) {
                             this.pc += 2;
                         }
                         break;
+                    default:
+                        console.error(`Opcode not found ${opcode}`);
                 }
                 break;
-            }
-            case 0xF000: {
-                const x = (opcode & 0x0F00) >> 8;
-
+            case 0xF000:
                 switch (opcode & 0x00FF) {
                     case 0x0007:
-                        this.register[x] = this.delay;        
+                        this.V[x] = this.delay;        
                         break;
                     case 0x000A:
                         // TODO: implement interrupt
                         this.pc -= 2;
                         break;
                     case 0x0015:
-                        this.delay = this.register[x];
+                        this.delay = this.V[x];
                         break;
                     case 0x0018:
-                        this.sound = this.register[x];
+                        this.sound = this.V[x];
                         break;
                     case 0x001E:
-                        if (this.I + this.register[x] > 0xFFF) {
-                            this.register[0xF] = 1;
+                        if (this.I + this.V[x] > 0xFFF) {
+                            this.V[0xF] = 1;
                         } else {
-                            this.register[0xF] = 0;
+                            this.V[0xF] = 0;
                         }
 
-                        this.I += this.register[x];
+                        this.I += this.V[x];
                         this.I &= 0xFFF; 
                         break;
                     case 0x0029:
-                        this.I = this.register[(opcode & 0x0F00) >> 8] * 0x5;
+                        this.I = this.V[(opcode & 0x0F00) >> 8] * 0x5;
                         break;
                     case 0x0033: {                        
-                        this.memory[this.I] = (this.register[x] % 1000) / 100;
-                        this.memory[this.I + 1] = (this.register[x] % 100 ) / 10;
-                        this.memory[this.I + 2] = (this.register[x] % 10);
+                        this.memory[this.I] = (this.V[x] % 1000) / 100;
+                        this.memory[this.I + 1] = (this.V[x] % 100 ) / 10;
+                        this.memory[this.I + 2] = (this.V[x] % 10);
 
                         break;
                     }
                     case 0x0055:
                         for (let i = 0; i <= x; i++) {
-                            this.memory[this.I + i] = this.register[i];
+                            this.memory[this.I + i] = this.V[i];
                         }
 
                         this.I += x + 1;
                         break;
                     case 0x0065:
                         for (let i = 0; i <= x; i++) {
-                            this.register[i] = this.memory[this.I+i];
+                            this.V[i] = this.memory[this.I+i];
                         }
 
                         this.I += x + 1;
                         break;
+                    default:
+                        console.error(`Opcode not found ${opcode}`);
+                        
                 }
                 break;
-            }
             default:
                 console.error(`${opcode} is not understood by this emulator`);
         }
