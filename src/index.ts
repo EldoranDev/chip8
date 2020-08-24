@@ -7,6 +7,8 @@ import Chip8 from './chip8';
 import Display from './display';
 import Info from './info';
 
+import './style/base.css';
+
 (async () => {
   const canvas = document.getElementById('screen') as HTMLCanvasElement;
 

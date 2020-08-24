@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    --color-background: #011627;
+    --color-foreground: #F4F3EE;
+    --color-marker: #D33F49;
+  }
+  
+  body {
+    display: flex;
+    background: var(--color-background)
+  }
+  
+  canvas {
+    border: 2px solid var(--color-marker);
+  }
+  
+  table {
+    border: 0;
+  }
+  tr {
+    border-collapse: collapse;
+  }
+  tr.current {
+    background-color: var(--color-marker);
+  }
+  
+  #info {
+    padding-left: 16px;
+  }
+  
+  .panel {
+    color: var(--color-foreground);
+  }
