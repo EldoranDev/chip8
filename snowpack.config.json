@@ -15,5 +15,8 @@
   ],
   "installOptions": {
     "installTypes": true
+  },
+  "buildOptions": {
+    "baseUrl": "/chip8"
   }
 }
